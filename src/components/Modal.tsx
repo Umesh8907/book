@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+'use client'
+import React, { useState, useEffect } from 'react';
 
 const Modal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [step, setStep] = useState(1);
@@ -88,8 +89,29 @@ const Modal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
   };
 
+  // Generate time slots with 20-minute intervals
+  const generateTimeSlots = (start: string, end: string) => {
+    const startTime = new Date(`1970-01-01T${start}:00`);
+    const endTime = new Date(`1970-01-01T${end}:00`);
+    const slots = [];
+    while (startTime <= endTime) {
+      slots.push(startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      startTime.setMinutes(startTime.getMinutes() + 30);
+    }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots('08:00', '18:00');
+
   const today = new Date().toISOString().split('T')[0];
-  const currentTime = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const isSlotDisabled = (slot: string) => {
+    if (formData.date !== today) return false;
+    const [slotHour, slotMinute] = slot.split(':').map(Number);
+    const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+    return slotHour < currentHour || (slotHour === currentHour && slotMinute < currentMinute);
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 " >
@@ -105,13 +127,18 @@ const Modal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               min={today}
             />
             {errors.date && <p className="text-red-500">{errors.date}</p>}
-            <input
-              type="time"
+            <select
               value={formData.time}
               onChange={(e) => setFormData({ ...formData, time: e.target.value })}
               className="w-full p-2 border border-gray-300 rounded"
-              min={formData.date === today ? currentTime : undefined}
-            />
+            >
+              <option value="">Select Time</option>
+              {timeSlots.map((slot, index) => (
+                <option key={index} value={slot} disabled={isSlotDisabled(slot)}>
+                  {slot}
+                </option>
+              ))}
+            </select>
             {errors.time && <p className="text-red-500">{errors.time}</p>}
             <div className="flex justify-between">
               <button
